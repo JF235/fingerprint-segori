@@ -1,18 +1,18 @@
 # pyfing.pytorch
 
-Camada de adaptação PyTorch para o `pyfing`, isolada do código original.
+PyTorch adaptation layer for `pyfing`, isolated from the original code.
 
-## Objetivo
+## Purpose
 
-Este submódulo adiciona:
+This submodule adds:
 
-- arquiteturas PyTorch para os modelos neurais do `pyfing`;
-- conversão de pesos Keras (`*.weights.h5`) para PyTorch (`*.pth`);
-- validação de compatibilidade Keras <-> PyTorch:
-  - comparação tensor-a-tensor dos pesos convertidos;
-  - comparação de saída de inferência em fixtures determinísticas.
+- PyTorch architectures for `pyfing` neural models;
+- Keras weights conversion (`*.weights.h5`) to PyTorch (`*.pth`);
+- Keras <-> PyTorch compatibility validation:
+  - tensor-by-tensor comparison of converted weights;
+  - inference output comparison on deterministic fixtures.
 
-Modelos cobertos:
+Covered models:
 
 - `SUFS`
 - `SNFOE`
@@ -20,47 +20,47 @@ Modelos cobertos:
 - `SNFEN`
 - `LEADER`
 
-## Estrutura
+## Structure
 
-- `common.py`: blocos compartilhados e utilitários de conversão.
-- `*_model.py`: arquiteturas PyTorch por modelo.
-- `algorithms.py`: wrappers com assinaturas de `run`/`run_on_db`.
-- `simple_api.py`: API simples espelhando a API principal.
-- `registry.py`: registro central de modelos e caminhos de pesos.
-- `compat.py`: núcleo de conversão e validação.
-- `tools/convert_weights.py`: CLI de conversão.
-- `tools/validate_compat.py`: CLI de validação.
-- `models/`: destino padrão dos arquivos `.pth` e `manifest.json`.
+- `common.py`: shared blocks and conversion utilities.
+- `*_model.py`: PyTorch architectures per model.
+- `algorithms.py`: wrappers with `run`/`run_on_db` signatures.
+- `simple_api.py`: simple API mirroring the main API.
+- `registry.py`: central model registry and weight paths.
+- `compat.py`: conversion and validation core.
+- `tools/convert_weights.py`: conversion CLI.
+- `tools/validate_compat.py`: validation CLI.
+- `models/`: default destination for `.pth` files and `manifest.json`.
 
-## Conversão de pesos
+## Weight conversion
 
-Na raiz do repositório:
+From the repository root:
 
 ```bash
 python -m pyfing.pytorch.tools.convert_weights --all
 ```
 
-Converter apenas um modelo:
+Convert only one model:
 
 ```bash
 python -m pyfing.pytorch.tools.convert_weights --model snfoe
 ```
 
-## Validação de compatibilidade
+## Compatibility validation
 
-Validar todos os modelos:
+Validate all models:
 
 ```bash
 python -m pyfing.pytorch.tools.validate_compat --all
 ```
 
-Salvar relatório JSON:
+Save JSON report:
 
 ```bash
 python -m pyfing.pytorch.tools.validate_compat --all --report-json /tmp/pyfing_pytorch_compat.json
 ```
 
-## Uso da API PyTorch
+## Using the PyTorch API
 
 ```python
 import pyfing.pytorch as pft
@@ -72,7 +72,7 @@ enh = pft.fingerprint_enhancement(fingerprint, ori, rp, seg)
 mnt = pft.minutiae_extraction(fingerprint)
 ```
 
-## Observações
+## Notes
 
-- Este submódulo é separado por design e não altera a API original do `pyfing`.
-- Os scripts de conversão/validação assumem ambiente com `torch`, `keras`, `tensorflow` e `h5py` instalados.
+- This submodule is separate by design and does not change the original `pyfing` API.
+- Conversion/validation scripts assume an environment with `torch`, `keras`, `tensorflow`, and `h5py` installed.
