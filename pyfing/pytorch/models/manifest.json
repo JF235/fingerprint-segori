@@ -1,0 +1,174 @@
+{
+  "models": [
+    {
+      "inference": {
+        "allclose": false,
+        "atol": 0.0001,
+        "keras_shape": [
+          1,
+          256,
+          256,
+          4
+        ],
+        "max_abs": 0.0006635189056396484,
+        "max_abs_tol": 0.05,
+        "mean_abs": 4.737295000722952e-07,
+        "mean_abs_tol": 0.001,
+        "passed": true,
+        "rtol": 0.0001,
+        "torch_shape": [
+          1,
+          256,
+          256,
+          4
+        ]
+      },
+      "keras_weights": "/localStorage/repos/pyfing/pyfing/models/LEADER.weights.h5",
+      "model": "leader",
+      "passed": true,
+      "sha256": "34cddf59287e9f8966afb328cc81f7c39bbe2d2fabfd13aa475bad56a2c39f72",
+      "size_bytes": 3845457,
+      "tensor_diffs": {
+        "count": 184,
+        "max_abs": 0.0,
+        "max_mean": 0.0
+      },
+      "torch_weights": "/localStorage/repos/pyfing/pyfing/pytorch/models/LEADER.pth"
+    },
+    {
+      "inference": {
+        "allclose": false,
+        "atol": 0.0001,
+        "keras_shape": [
+          1,
+          256,
+          256
+        ],
+        "max_abs": 0.03527379035949707,
+        "max_abs_tol": 0.05,
+        "mean_abs": 5.610305834125029e-06,
+        "mean_abs_tol": 0.001,
+        "passed": true,
+        "rtol": 0.0001,
+        "torch_shape": [
+          1,
+          256,
+          256
+        ]
+      },
+      "keras_weights": "/localStorage/repos/pyfing/pyfing/models/SNFEN.weights.h5",
+      "model": "snfen",
+      "passed": true,
+      "sha256": "18d426bbc89cf8c6236430c772e3fc6ca735fba41c1bb313d08961d8e7e832ea",
+      "size_bytes": 19710412,
+      "tensor_diffs": {
+        "count": 68,
+        "max_abs": 0.0,
+        "max_mean": 0.0
+      },
+      "torch_weights": "/localStorage/repos/pyfing/pyfing/pytorch/models/SNFEN.pth"
+    },
+    {
+      "inference": {
+        "allclose": false,
+        "atol": 0.0001,
+        "keras_shape": [
+          1,
+          256,
+          256
+        ],
+        "max_abs": 0.00067138671875,
+        "max_abs_tol": 0.05,
+        "mean_abs": 8.913715282687917e-05,
+        "mean_abs_tol": 0.001,
+        "passed": true,
+        "rtol": 0.0001,
+        "torch_shape": [
+          1,
+          256,
+          256
+        ]
+      },
+      "keras_weights": "/localStorage/repos/pyfing/pyfing/models/SNFFE.weights.h5",
+      "model": "snffe",
+      "passed": true,
+      "sha256": "037d7e0a8b17f5cff19f43e73651bfc8f0ed1a16811b98e03b9cd398807ce33d",
+      "size_bytes": 19707916,
+      "tensor_diffs": {
+        "count": 68,
+        "max_abs": 0.0,
+        "max_mean": 0.0
+      },
+      "torch_weights": "/localStorage/repos/pyfing/pyfing/pytorch/models/SNFFE.pth"
+    },
+    {
+      "inference": {
+        "allclose": true,
+        "atol": 0.0001,
+        "keras_shape": [
+          1,
+          256,
+          256
+        ],
+        "max_abs": 1.4901161193847656e-06,
+        "max_abs_tol": 0.05,
+        "mean_abs": 2.452809440001147e-07,
+        "mean_abs_tol": 0.001,
+        "passed": true,
+        "rtol": 0.0001,
+        "torch_shape": [
+          1,
+          256,
+          256
+        ]
+      },
+      "keras_weights": "/localStorage/repos/pyfing/pyfing/models/SNFOE.weights.h5",
+      "model": "snfoe",
+      "passed": true,
+      "sha256": "1261104971e63c7a361a0555a8ccc39029b00ddd4e5f097261ca1a7081585f25",
+      "size_bytes": 19706892,
+      "tensor_diffs": {
+        "count": 68,
+        "max_abs": 0.0,
+        "max_mean": 0.0
+      },
+      "torch_weights": "/localStorage/repos/pyfing/pyfing/pytorch/models/SNFOE.pth"
+    },
+    {
+      "inference": {
+        "allclose": true,
+        "atol": 0.0001,
+        "keras_shape": [
+          1,
+          256,
+          256,
+          1
+        ],
+        "max_abs": 2.2113323211669922e-05,
+        "max_abs_tol": 0.05,
+        "mean_abs": 1.9426835251579178e-08,
+        "mean_abs_tol": 0.001,
+        "passed": true,
+        "rtol": 0.0001,
+        "torch_shape": [
+          1,
+          256,
+          256,
+          1
+        ]
+      },
+      "keras_weights": "/localStorage/repos/pyfing/pyfing/models/SUFS.weights.h5",
+      "model": "sufs",
+      "passed": true,
+      "sha256": "4c654fa7622f9c852e1e680bfac66d7052c6461077553af5a153258dc55f8fe8",
+      "size_bytes": 28357517,
+      "tensor_diffs": {
+        "count": 74,
+        "max_abs": 0.0,
+        "max_mean": 0.0
+      },
+      "torch_weights": "/localStorage/repos/pyfing/pyfing/pytorch/models/SUFS.pth"
+    }
+  ],
+  "tool": "pyfing.pytorch.tools.convert_weights"
+}
