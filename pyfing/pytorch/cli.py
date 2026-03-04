@@ -203,8 +203,8 @@ Examples:
             help="Execution strategy: full_gpu (default) or hybrid",
         )
         sp.add_argument(
-            "-r", "--recursive", action="store_true",
-            help="Search directories recursively",
+            "-r", "--recursive", action="store_true", default=True,
+            help="Search directories recursively (default: on)",
         )
         sp.add_argument(
             "--compile", action="store_true",

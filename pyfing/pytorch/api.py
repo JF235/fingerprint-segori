@@ -29,14 +29,29 @@ from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.distributed import DistributedSampler
 from tqdm import tqdm
 
-from .algorithms import LeaderNet, _load_state
-from .registry import get_model_spec
+# Import LeaderNet directly from its module to avoid pulling in Keras/TensorFlow.
+# algorithms.py imports from pyfing.minutiae which does `import keras` at the
+# top level — that triggers TF even if we never use it.
+from .leader_model import LeaderNet
 
 logger = logging.getLogger("pyfing.leader")
 
 torch.set_float32_matmul_precision("high")
 
-_DEFAULT_WEIGHTS_PATH = str(get_model_spec("leader").torch_weights)
+
+def _load_state(model: torch.nn.Module, weights_path: str, device: str) -> torch.nn.Module:
+    """Load weights into *model*, move to *device*, and set eval mode."""
+    state = torch.load(str(weights_path), map_location=device, weights_only=True)
+    model.load_state_dict(state)
+    model.to(device)
+    model.eval()
+    return model
+
+
+def _default_weights_path() -> str:
+    """Lazy lookup — registry import is deferred so TF is never loaded at CLI startup."""
+    from .registry import get_model_spec
+    return str(get_model_spec("leader").torch_weights)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Dataset
@@ -97,7 +112,7 @@ class FingerprintDataset(Dataset):
 _SUPPORTED_EXTS = {".png", ".bmp", ".wsq", ".tif", ".tiff", ".jpg", ".jpeg"}
 
 
-def find_image_paths(input_path: str, recursive: bool = False) -> list[str]:
+def find_image_paths(input_path: str, recursive: bool = True) -> list[str]:
     """Collect image paths from a file, directory, or .txt/.list file."""
     paths: list[str] = []
 
@@ -356,7 +371,7 @@ class InferenceRunner:
             dist.barrier()
 
         # 2. Model
-        weights = self.config.get("weights_path") or _DEFAULT_WEIGHTS_PATH
+        weights = self.config.get("weights_path") or _default_weights_path()
         self.model = _load_state(LeaderNet(), weights, self.device)
         if self.config.get("compile_model"):
             if self.is_main:
@@ -512,7 +527,7 @@ def run_inference(
     dpi: int = 500,
     threshold: float = 0.6,
     type_threshold: float = 0.5,
-    recursive: bool = False,
+    recursive: bool = True,
     strategy: str = "full_gpu",
     num_cpu_workers: int = 4,
     compile_model: bool = False,
