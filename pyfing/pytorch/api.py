@@ -36,7 +36,8 @@ from .leader_model import LeaderNet
 
 logger = logging.getLogger("pyfing.leader")
 
-torch.set_float32_matmul_precision("high")
+torch.backends.cuda.matmul.fp32_precision = "tf32"
+torch.backends.cudnn.conv.fp32_precision = "tf32"
 
 
 def _load_state(model: torch.nn.Module, weights_path: str, device: str) -> torch.nn.Module:
