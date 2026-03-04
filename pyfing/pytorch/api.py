@@ -206,7 +206,8 @@ def _extract_minutiae_numpy(
         return np.empty((0, 4), dtype=np.float32)
     directions = out[ys, xs, 1]
     qualities  = out[ys, xs, 3]
-    return np.column_stack([xs, ys, directions, qualities]).astype(np.float32)
+    result = np.column_stack([xs, ys, directions, qualities]).astype(np.float32)
+    return result[np.argsort(-qualities)]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
