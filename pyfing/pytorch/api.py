@@ -248,7 +248,7 @@ def save_minutiae(
     xs          = minutiae_np[:, 0].astype(int)
     ys          = minutiae_np[:, 1].astype(int)
     # CCW degrees (pyfing uses CCW radians — direct conversion, no negation)
-    angle_deg   = np.round(np.rad2deg(minutiae_np[:, 2]) % 360).astype(int)
+    angle_deg   = np.round(np.rad2deg(minutiae_np[:, 2]) % 360).astype(int) % 360
     quality_int = np.round(minutiae_np[:, 3] * 100).astype(int)
 
     out_array = np.column_stack([xs, ys, angle_deg, quality_int])
