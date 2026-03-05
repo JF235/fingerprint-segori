@@ -57,34 +57,9 @@ def parse_gpus(gpus_str: str) -> int | list[int]:
     raise ValueError(f"Invalid GPU specification: {gpus_str!r}")
 
 
-def _to_cuda_visible_devices(gpus: int | list[int]) -> str:
-    if gpus == 0:
-        return ""
-    if isinstance(gpus, int):
-        return ",".join(str(i) for i in range(gpus))
-    return ",".join(str(i) for i in gpus)
-
-
-def _early_set_cuda_visible_devices():
-    """Set CUDA_VISIBLE_DEVICES from --gpus *before* torch is imported.
-
-    The CUDA runtime reads this env variable once at initialisation; setting
-    it after ``import torch`` has no effect.
-    """
-    import os
-
-    inference_cmds = {"infer", "forward"}
-    if len(sys.argv) < 2 or sys.argv[1] not in inference_cmds:
-        return
-
-    gpus_str = "1"   # default: use 1 GPU
-    for i, arg in enumerate(sys.argv):
-        if arg == "--gpus" and i + 1 < len(sys.argv):
-            gpus_str = sys.argv[i + 1]
-            break
-
-    gpus = parse_gpus(gpus_str)
-    os.environ["CUDA_VISIBLE_DEVICES"] = _to_cuda_visible_devices(gpus)
+# Removed _to_cuda_visible_devices and _early_set_cuda_visible_devices
+# to avoid relying on CUDA_VISIBLE_DEVICES env var, which doesn't work
+# if torch is already imported. We now use torch.cuda.set_device() directly.
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -139,8 +114,6 @@ def infer_command(args):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def main():
-    _early_set_cuda_visible_devices()
-
     parser = argparse.ArgumentParser(
         prog="leader",
         description="pyfing LEADER — Lightweight End-to-end Attention-gated Dual autoencodER",

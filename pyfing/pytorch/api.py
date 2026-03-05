@@ -314,6 +314,13 @@ def _save_results_chunk(
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _setup_ddp(rank: int, world_size: int, gpu_id: int, timeout_minutes: int = 30):
+    """Setup DDP for a specific GPU.
+    
+    Args:
+        rank: Process rank in DDP (0 to world_size-1)
+        world_size: Total number of processes
+        gpu_id: Physical CUDA device ID to use
+    """
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "12355"
     torch.cuda.set_device(gpu_id)
@@ -332,8 +339,17 @@ def _cleanup_ddp():
 
 
 def _ddp_launch_target(rank: int, world_size: int, config: dict):
+    """DDP worker process entry point.
+    
+    Args:
+        rank: Process rank (0 to world_size-1)
+        world_size: Total number of processes
+        config: Configuration dict containing 'gpu_ids' list
+    """
+    gpu_ids = config.get("gpu_ids", list(range(world_size)))
+    gpu_id = gpu_ids[rank]  # Map rank to actual physical GPU ID
     runner = InferenceRunner(config)
-    runner.setup(rank=rank, world_size=world_size, gpu_id=rank)
+    runner.setup(rank=rank, world_size=world_size, gpu_id=gpu_id)
     runner.run()
 
 
@@ -361,7 +377,10 @@ class InferenceRunner:
             _setup_ddp(rank, world_size, gpu_id)
             self.device = f"cuda:{gpu_id}"
         elif self.config.get("gpus") and torch.cuda.is_available():
-            self.device = "cuda:0"
+            # Single GPU: use the specified GPU ID directly
+            gpu_id = self.config.get("gpu_ids", [0])[0]
+            torch.cuda.set_device(gpu_id)
+            self.device = f"cuda:{gpu_id}"
         else:
             self.device = "cpu"
 
@@ -569,21 +588,30 @@ def run_inference(
 
     use_cpu = not gpus or not torch.cuda.is_available()
     world_size = 0
+    gpu_ids = []
+    
     if not use_cpu:
         if isinstance(gpus, int):
             world_size = gpus
+            # Use first N GPUs: [0, 1, ..., N-1]
+            gpu_ids = list(range(gpus))
         elif isinstance(gpus, list):
             world_size = len(gpus)
+            # Use specific GPU IDs as provided
+            gpu_ids = gpus
         else:
             raise TypeError(f"gpus must be int or list[int], got {type(gpus)}")
-
-    if not use_cpu:
-        visible = torch.cuda.device_count()
-        if world_size > visible:
-            raise ValueError(
-                f"Requested {world_size} GPU(s) but only {visible} visible "
-                f"(CUDA_VISIBLE_DEVICES={os.environ.get('CUDA_VISIBLE_DEVICES', '<unset>')})."
-            )
+    
+        # Validate GPU IDs
+        available_gpus = torch.cuda.device_count()
+        for gpu_id in gpu_ids:
+            if gpu_id >= available_gpus:
+                raise ValueError(
+                    f"Requested GPU {gpu_id} but only {available_gpus} GPUs available "
+                    f"(IDs: 0-{available_gpus-1})"
+                )
+    
+    config["gpu_ids"] = gpu_ids
 
     is_ddp = not use_cpu and world_size > 1
 
@@ -595,16 +623,16 @@ def run_inference(
         runner.run()
     elif is_ddp:
         logger.info(
-            "Running LEADER on %d GPU(s) (DDP). CUDA_VISIBLE_DEVICES=%s",
-            world_size, os.environ.get("CUDA_VISIBLE_DEVICES", "<unset>"),
+            "Running LEADER on %d GPU(s) (DDP) with GPU IDs: %s",
+            world_size, gpu_ids,
         )
         mp.spawn(_ddp_launch_target, nprocs=world_size, args=(world_size, config), join=True)
     else:
         logger.info(
-            "Running LEADER on single GPU. CUDA_VISIBLE_DEVICES=%s",
-            os.environ.get("CUDA_VISIBLE_DEVICES", "<unset>"),
+            "Running LEADER on single GPU: %d",
+            gpu_ids[0],
         )
         config["gpus"] = True
         runner = InferenceRunner(config)
-        runner.setup(rank=-1, world_size=1, gpu_id=0)
+        runner.setup(rank=-1, world_size=1, gpu_id=gpu_ids[0])
         runner.run()
