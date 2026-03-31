@@ -192,8 +192,9 @@ def dynamic_padding_collate(batch):
 def _extract_minutiae_numpy(
     out: np.ndarray,         # [H, W, 4] float32
     threshold: float,
+    type_threshold: float,
 ) -> np.ndarray:
-    """Return [N, 4] array: [x, y, direction_rad, quality].
+    """Return [N, 6] array: [x, y, direction_rad, quality, type_code, type_score].
 
     Channel layout:
         out[..., 0]: position confidence
@@ -203,10 +204,12 @@ def _extract_minutiae_numpy(
     """
     ys, xs = np.where(out[..., 3] >= threshold)
     if xs.size == 0:
-        return np.empty((0, 4), dtype=np.float32)
+        return np.empty((0, 6), dtype=np.float32)
     directions = out[ys, xs, 1]
     qualities  = out[ys, xs, 3]
-    result = np.column_stack([xs, ys, directions, qualities]).astype(np.float32)
+    type_scores = out[ys, xs, 2]
+    type_codes = np.where(out[ys, xs, 2] >= type_threshold, 1, 2)
+    result = np.column_stack([xs, ys, directions, qualities, type_codes, type_scores]).astype(np.float32)
     return result[np.argsort(-qualities)]
 
 
@@ -215,15 +218,17 @@ def _extract_minutiae_numpy(
 # ─────────────────────────────────────────────────────────────────────────────
 
 def save_minutiae(
-    minutiae_np: np.ndarray,   # [N, 4]: x, y, direction_rad, quality
+    minutiae_np: np.ndarray,   # [N, 6]: x, y, direction_rad, quality, type_code, type_score
     input_path: str,
     output_path: str,
     input_base_path: str | None = None,
 ):
-    """Write a .min file in the standard #MIN X Y ANGLE QUALITY format.
+    """Write a .min file in the #MIN X Y ANGLE QUALITY TYPE TYPESCORE format.
 
     Angle convention (pyfing LEADER): CCW radians → CCW degrees.
     Formula: ``round(deg(direction_rad) % 360)``  (no negation, unlike FingerNet).
+    Type convention: ``1`` = ridge ending, ``2`` = ridge bifurcation.
+    Type score convention: raw LEADER type confidence scaled to ``0..100``.
     """
     if input_base_path and os.path.isdir(input_base_path):
         rel_path = os.path.relpath(input_path, input_base_path)
@@ -238,23 +243,20 @@ def save_minutiae(
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
     if minutiae_np.size == 0:
-        # Still write a valid (empty) .min file
-        np.savetxt(
-            out_path, np.empty((0, 4), dtype=int),
-            fmt="%d", header="X Y ANGLE QUALITY", comments="#MIN ", delimiter=" ",
-        )
-        return
+        out_array = np.empty((0, 6), dtype=int)
+    else:
+        xs          = minutiae_np[:, 0].astype(int)
+        ys          = minutiae_np[:, 1].astype(int)
+        # CCW degrees (pyfing uses CCW radians — direct conversion, no negation)
+        angle_deg   = np.round(np.rad2deg(minutiae_np[:, 2]) % 360).astype(int) % 360
+        quality_int = np.round(minutiae_np[:, 3] * 100).astype(int)
+        type_codes  = minutiae_np[:, 4].astype(int)
+        type_score_int = np.round(minutiae_np[:, 5] * 100).astype(int)
+        out_array = np.column_stack([xs, ys, angle_deg, quality_int, type_codes, type_score_int])
 
-    xs          = minutiae_np[:, 0].astype(int)
-    ys          = minutiae_np[:, 1].astype(int)
-    # CCW degrees (pyfing uses CCW radians — direct conversion, no negation)
-    angle_deg   = np.round(np.rad2deg(minutiae_np[:, 2]) % 360).astype(int) % 360
-    quality_int = np.round(minutiae_np[:, 3] * 100).astype(int)
-
-    out_array = np.column_stack([xs, ys, angle_deg, quality_int])
     np.savetxt(
         out_path, out_array,
-        fmt="%d", header="X Y ANGLE QUALITY", comments="#MIN ", delimiter=" ",
+        fmt="%d", header="X Y ANGLE QUALITY TYPE TYPESCORE", comments="#MIN ", delimiter=" ",
     )
 
 
@@ -268,6 +270,7 @@ def _postprocess_and_save_batch(
     batch_orig_shapes: tuple,        # (orig_hs, orig_ws) tensors
     output_path: str,
     threshold: float,
+    type_threshold: float,
     input_base_path: str | None,
 ):
     """CPU worker: extract minutiae from raw model output and save (hybrid strategy)."""
@@ -282,7 +285,7 @@ def _postprocess_and_save_batch(
             orig_h = orig_hs[i].item()
             orig_w = orig_ws[i].item()
             out_crop = out_nhwc[i, :orig_h, :orig_w, :]
-            minutiae = _extract_minutiae_numpy(out_crop, threshold)
+            minutiae = _extract_minutiae_numpy(out_crop, threshold, type_threshold)
             save_minutiae(minutiae, img_path, output_path, input_base_path)
 
     except Exception as e:
@@ -445,6 +448,7 @@ class InferenceRunner:
     def _run_hybrid(self):
         num_cpu = self.config.get("num_cpu_workers", 4)
         threshold = self.config.get("threshold", 0.6)
+        type_threshold = self.config.get("type_threshold", 0.5)
         input_base = self.config.get("input_base_path")
 
         with ThreadPoolExecutor(max_workers=num_cpu) as executor:
@@ -466,7 +470,7 @@ class InferenceRunner:
                     future = executor.submit(
                         _postprocess_and_save_batch,
                         raw_cpu, batch_paths, batch_orig_shapes,
-                        self.config["output_path"], threshold, input_base,
+                        self.config["output_path"], threshold, type_threshold, input_base,
                     )
                     futures.append(future)
 
@@ -484,6 +488,7 @@ class InferenceRunner:
         num_save = self.config.get("num_cpu_workers", 4)
         chunk_size = self.config["batch_size"] * 10
         threshold = self.config.get("threshold", 0.6)
+        type_threshold = self.config.get("type_threshold", 0.5)
         input_base = self.config.get("input_base_path")
 
         with ThreadPoolExecutor(max_workers=num_save) as save_executor:
@@ -508,8 +513,13 @@ class InferenceRunner:
                         orig_h = orig_hs[i].item()
                         orig_w = orig_ws[i].item()
                         out_crop = out_nhwc[i, :orig_h, :orig_w, :]
-                        minutiae = _extract_minutiae_numpy(out_crop, threshold)
-                        pending_chunk.append({"input_path": img_path, "minutiae": minutiae})
+                        minutiae = _extract_minutiae_numpy(out_crop, threshold, type_threshold)
+                        pending_chunk.append(
+                            {
+                                "input_path": img_path,
+                                "minutiae": minutiae,
+                            }
+                        )
 
                     if len(pending_chunk) >= chunk_size:
                         futures.append(
@@ -566,7 +576,7 @@ def run_inference(
         num_workers:    DataLoader worker processes per GPU.
         dpi:            DPI of input images (model trained at 500).
         threshold:      Minutia quality threshold (default 0.6).
-        type_threshold: Ending/Bifurcation threshold (kept for API consistency).
+        type_threshold: Ending/Bifurcation threshold used in exported minutia type.
         recursive:      Recurse into subdirectories.
         strategy:       ``'full_gpu'`` or ``'hybrid'``.
         num_cpu_workers: Thread workers for saving (full_gpu) or post-proc (hybrid).

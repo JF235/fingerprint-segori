@@ -127,14 +127,16 @@ output/
 Each `.min` file follows the standard format:
 
 ```
-#MIN X Y ANGLE QUALITY
-123 456 270 82
+#MIN X Y ANGLE QUALITY TYPE TYPESCORE
+123 456 270 82 1 91
 ...
 ```
 
 - `X`, `Y`: coordinates in pixels (origin top-left)
 - `ANGLE`: CCW degrees in `[0, 360)`, zero pointing right
 - `QUALITY`: integer `0–100`
+- `TYPE`: `1` = ridge ending, `2` = ridge bifurcation
+- `TYPESCORE`: raw LEADER type confidence as integer `0–100`
 
 ### Angle convention
 

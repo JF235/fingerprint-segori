@@ -83,6 +83,7 @@ def infer_command(args):
     print(f"CPU workers:  {args.cpu_workers}")
     print(f"DPI:          {args.dpi}")
     print(f"Threshold:    {args.threshold}")
+    print(f"Type thr.:    {args.type_threshold}")
     print(f"Strategy:     {args.strategy}")
     print(f"Recursive:    {args.recursive}")
     print(f"Compile:      {args.compile}")
